@@ -74,7 +74,15 @@ app.oauth = oauthserver({
 
 app.all('/oauth/token', app.oauth.grant());
 var apiRouter = require('./routers/api');
-app.use('/api/v1', apiRouter);
+
+var crossDomain = function(req, res, next){
+    res.setHeader('Access-Control-Allow-Origin','*');
+    res.setHeader("Access-Control-Max-Age", "3600");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+    return next();
+}
+
+app.use('/api/v1', crossDomain, apiRouter);
 app.use('/api', app.oauth.authorise(), apiRouter);
 app.use(app.oauth.errorHandler());
 
