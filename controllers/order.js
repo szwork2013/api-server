@@ -43,17 +43,36 @@ module.exports = {
         limit = paginator.getLimit();
         skip = paginator.getOffset();
 
-        Order.forge(filter)
+        var like = filter.like, sort = util.parseSort(filter.sort);
+        var trasher = ['like', 'page', 'page_size', 'sort']
+        _.each(trasher, function(key){
+            filter[key] && (delete filter[key])
+        })
+
+        var queryFun = function(qb, limited){
+            //排序
+            if(sort){
+                qb = qb.orderByRaw(sort);
+            }
+            //按属性过滤
+            qb = qb.where(filter);
+            //是否进行分页
+            if(limited) qb = qb.limit(limit).offset(skip);
+        }
+
+        Order.forge()
             .query(function (qb) {
-                qb.limit(limit).offset(skip);
+                queryFun(qb, true);
             })
             .fetchAll({withRelated: relations})
             .then(function(orders) {
                 return Order.forge(filter)
-                .query()
+                .query(function(qb){
+                    queryFun(qb);
+                })
                 .count()
                 .then(function (count) {
-                    count = count[0]['count(*)'];
+                    count = count.length? count[0]['count(*)'] : count;
                     return {
                         count: count,
                         data: orders

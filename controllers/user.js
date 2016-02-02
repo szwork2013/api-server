@@ -43,18 +43,34 @@ module.exports = {
         limit = paginator.getLimit();
         skip = paginator.getOffset();
 
-        User.forge(filter)
+        var queryFun = function(qb, limited){
+            if(like) { 
+                qb = qb.where('name', 'like', '%' + like + '%');
+            }
+            //排序
+            if(sort){
+                qb = qb.orderByRaw(sort);
+            }
+            //按属性过滤
+            qb = qb.where(filter);
+            //是否进行分页
+            if(limited) qb = qb.limit(limit).offset(skip);
+        }
+
+        User.forge()
             .query(function (qb) {
-                qb.limit(limit).offset(skip);
+                queryFun(qb, true);
             })
             .fetchAll({withRelated: relations, columns: columns})
             //.fetchAll()
             .then(function(users) {
-                return User.forge(filter)
-                .query()
+                return User.forge()
+                .query(function(qb){
+                    queryFun(qb);
+                })
                 .count()
                 .then(function (count) {
-                    count = count[0]['count(*)'];
+                    count = count.length? count[0]['count(*)'] : count;
                     return {
                         count: count,
                         data: users

@@ -43,21 +43,40 @@ module.exports = {
         limit = paginator.getLimit();
         skip = paginator.getOffset();
 
-        var like = filter.like;
-        filter.like && (delete filter.like);
+        var like = filter.like, sort = util.parseSort(filter.sort);
+        var trasher = ['like', 'page', 'page_size', 'sort']
+        _.each(trasher, function(key){
+            filter[key] && (delete filter[key])
+        })
 
-        Store.forge(filter)
+        var queryFun = function(qb, limited){
+            if(like) { 
+                qb = qb.where('name', 'like', '%' + like + '%');
+            }
+            //排序
+            if(sort){
+                qb = qb.orderByRaw(sort);
+            }
+            //按属性过滤
+            qb = qb.where(filter);
+            //是否进行分页
+            if(limited) qb = qb.limit(limit).offset(skip);
+        }
+
+
+        Store.forge()
             .query(function (qb) {
-                if(like) {qb = qb.where('name', 'like', '%' + like + '%');}
-                qb.limit(limit).offset(skip);
+                queryFun(qb, true);
             })
             .fetchAll({withRelated: relations})
             .then(function(stores) {
                 return Store.forge(filter)
-                .query()
+                .query(function(qb){
+                    queryFun(qb)
+                })
                 .count()
                 .then(function (count) {
-                    count = count[0]['count(*)'];
+                    count = count.length? count[0]['count(*)'] : count;
                     return {
                         count: count,
                         data: stores
