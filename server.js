@@ -34,6 +34,7 @@ var knex = require('knex')({
     passport = require('passport'),
     crypto = require('crypto'),
     Bookshelf = require('bookshelf'),
+    knexLogger = require('knex-logger'),
     messages = require('./util/messages');
 
 var app = express();
@@ -53,6 +54,8 @@ app.use(session({
     resave: true,
     saveUninitialized: true
 }));
+
+app.use(knexLogger(knex));
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());

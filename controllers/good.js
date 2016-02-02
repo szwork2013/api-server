@@ -106,25 +106,34 @@ module.exports = {
         })
         //filter.like && (delete filter.like);
         //console.log(sort)
+        var queryFun = function(qb, limited){
+            if(like) { 
+                qb = qb.where('name', 'like', '%' + like + '%')
+                    .orWhere('description', 'like', '%' + like + '%');
+            }
+            //排序
+            if(sort){
+                qb = qb.orderByRaw(sort);
+            }
+            //按属性过滤
+            qb = qb.where(filter);
+            //是否进行分页
+            if(limited) qb = qb.limit(limit).offset(skip);
+        }
 
         Good.forge()
-            .query(function (qb) {
-                if(like) { 
-                    qb = qb.where('name', 'like', '%' + like + '%')
-                        .orWhere('description', 'like', '%' + like + '%');
-                }
-                if(sort){
-                    qb = qb.orderByRaw(sort);
-                }
-                qb.where(filter).limit(limit).offset(skip);
+            .query(function(qb){
+                queryFun(qb, true)
             })
             .fetchAll({withRelated: relations})
             .then(function(goods) {
-                return Good.forge(filter)
-                .query()
+                return Good.forge()
+                .query(function(qb){
+                    queryFun(qb)
+                })
                 .count()
                 .then(function (count) {
-                    count = count[0]['count(*)'];
+                    count = count.length? count[0]['count(*)'] : count;
                     return {
                         count: count,
                         data: goods
@@ -136,7 +145,6 @@ module.exports = {
             }).then(function (result) {
                 var count = result.count;
                 var goods = result.data;
-
                 paginator.setCount(count);
                 paginator.setData(goods);
 
