@@ -30,7 +30,7 @@ module.exports = {
         var relations = [];
         var inline_relation = parseInt(req.param('inline-relation-depth'));
         if(!isNaN(inline_relation) && inline_relation >= 1){
-            relations = ['good']
+            relations = ['good', 'good.supplier']
         }
 
         Cart.where(filter) // query('where', 'user_id', '=', filter.user_id)
@@ -56,11 +56,18 @@ module.exports = {
      * 
      */
     update: function(req, res, next){
-        var filter = util.param(req);
-        var amount = parseInt(req.body.amount) || 0;
+        var user_id = req.params.user_id;
+        var good_id = req.body.good_id;
+        var amount = req.body.amount;
+
+        if(req.user.id != user_id) {
+            var error = { code: 500, msg: 'not authenticated.'};
+            return util.res(error, res);
+        }
+
         Cart.where({
-                user_id: filter.user_id, 
-                good_id: req.body.good_id
+                user_id: user_id, 
+                good_id: good_id
             })
             .fetch()
             .then(function (item) {
@@ -95,9 +102,9 @@ module.exports = {
                 } else {
                     //如果不存在该商品项，则为新增
                     Cart.forge({
-                            user_id: filter.user_id,
-                            good_id: req.body.good_id,
-                            amount: req.body.amount
+                            user_id: user_id,
+                            good_id: good_id,
+                            amount: amount
                         })
                         .save()
                         .then(function (item) {
